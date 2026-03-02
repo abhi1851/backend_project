@@ -1,0 +1,11 @@
+FROM bitnamilegacy/spark:3.5.1
+
+WORKDIR /app
+
+# Install Python dependencies needed by the Spark job (do NOT install pyspark here; Spark is provided by the base image)
+COPY requirements.txt /app/requirements.txt
+RUN pip install --no-cache-dir -r /app/requirements.txt
+
+COPY stream_processor.py /app/stream_processor.py
+
+ENTRYPOINT ["spark-submit", "/app/stream_processor.py"]

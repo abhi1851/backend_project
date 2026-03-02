@@ -1,0 +1,4 @@
+Flask==3.0.3
+cassandra-driver==3.28.0
+prometheus-client==0.20.0
+gunicorn==22.0.0

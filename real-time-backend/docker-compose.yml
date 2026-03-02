@@ -1,0 +1,82 @@
+version: "3.8"
+
+services:
+  cassandra:
+    image: cassandra:4.1
+    environment:
+      - MAX_HEAP_SIZE=1G
+      - HEAP_NEWSIZE=256M
+      - CASSANDRA_CLUSTER_NAME=rt-backend
+    ports:
+      - "9042:9042"
+    volumes:
+      - cassandra_data:/var/lib/cassandra
+
+  kafka:
+    image: bitnamilegacy/kafka:3.7.1-debian-12-r4
+    environment:
+      - KAFKA_ENABLE_KRAFT=yes
+      - KAFKA_CFG_NODE_ID=1
+      - KAFKA_CFG_PROCESS_ROLES=broker,controller
+      - KAFKA_CFG_CONTROLLER_LISTENER_NAMES=CONTROLLER
+      - KAFKA_CFG_LISTENER_SECURITY_PROTOCOL_MAP=CONTROLLER:PLAINTEXT,INTERNAL:PLAINTEXT,EXTERNAL:PLAINTEXT
+      - KAFKA_CFG_LISTENERS=INTERNAL://:9092,EXTERNAL://:9094,CONTROLLER://:9093
+      - KAFKA_CFG_ADVERTISED_LISTENERS=INTERNAL://kafka:9092,EXTERNAL://localhost:9094
+      - KAFKA_CFG_INTER_BROKER_LISTENER_NAME=INTERNAL
+      - KAFKA_CFG_CONTROLLER_QUORUM_VOTERS=1@kafka:9093
+      - KAFKA_CFG_LOG_DIRS=/bitnami/kafka/data
+    ports:
+      - "9092:9092"   # internal network (for other containers)
+      - "9094:9094"   # external access from host
+    volumes:
+      - kafka_data:/bitnami/kafka
+
+  api:
+    build: ./api
+    env_file: ./.env
+    depends_on:
+      - cassandra
+      - kafka
+    ports:
+      - "${API_PORT:-8000}:8000"
+
+  flink-app:
+    build: ./flink-app
+    container_name: flink-app
+    depends_on:
+      - kafka
+    environment:
+      - KAFKA_BROKER=${KAFKA_BROKER:-kafka:9092}
+    command: ["python", "flink_job.py"]
+
+  spark-app:
+    build: ./spark-app
+    container_name: spark-app
+    depends_on:
+      - kafka
+      - cassandra
+    environment:
+      - KAFKA_BROKER=${KAFKA_BROKER:-kafka:9092}
+      - CASSANDRA_HOST=${CASSANDRA_HOST:-cassandra}
+      - CASSANDRA_KEYSPACE=${CASSANDRA_KEYSPACE:-rt_backend}
+    command: ["spark-submit", "/app/stream_processor.py"]
+
+  prometheus:
+    image: prom/prometheus:latest
+    volumes:
+      - ./monitoring/prometheus/prometheus.yml:/etc/prometheus/prometheus.yml:ro
+    ports:
+      - "9090:9090"
+
+  grafana:
+    image: grafana/grafana:latest
+    depends_on:
+      - prometheus
+    volumes:
+      - ./monitoring/grafana/provisioning:/etc/grafana/provisioning
+    ports:
+      - "3000:3000"
+
+volumes:
+  cassandra_data:
+  kafka_data:

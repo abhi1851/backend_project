@@ -1,0 +1,13 @@
+Flask==3.0.3
+SQLAlchemy==2.0.32
+apache-flink==1.19.0
+cassandra-driver==3.28.0
+fastapi==0.111.0
+kafka-python==2.0.2
+prometheus-client==0.20.0
+prometheus-fastapi-instrumentator==6.1.0
+psycopg2-binary==2.9.9
+pydantic==2.8.2
+pyspark==3.5.1
+uvicorn[standard]==0.30.5
+Gunicorn==22.0.0

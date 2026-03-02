@@ -1,0 +1,14 @@
+version: "3.8"
+
+services:
+  kafka:
+    environment:
+      - KAFKA_CFG_LISTENER_SECURITY_PROTOCOL_MAP=PLAINTEXT:PLAINTEXT,SSL:SSL
+      - KAFKA_CFG_ADVERTISED_LISTENERS=PLAINTEXT://kafka:9092,SSL://kafka:9094
+      - KAFKA_CFG_SSL_KEYSTORE_FILENAME=kafka.keystore.jks
+      - KAFKA_CFG_SSL_TRUSTSTORE_FILENAME=kafka.truststore.jks
+
+  api:
+    environment:
+      - KAFKA_BROKER=kafka:9094
+      - KAFKA_SECURITY_PROTOCOL=SSL
