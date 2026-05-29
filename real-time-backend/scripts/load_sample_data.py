@@ -1,11 +1,18 @@
-import os, json, time, random, datetime, subprocess
+import datetime
+import json
+import os
+import random
+import time
 
-BROKER = os.getenv("KAFKA_BROKER", "kafka:9092")
-topic = "input-events"
+from kafka import KafkaProducer
 
-def send(msg: str):
-    cmd = f"docker compose exec -T kafka bash -lc \"echo '{msg}' | kafka-console-producer.sh --broker-list kafka:9092 --topic {topic} > /dev/null\""
-    subprocess.check_call(cmd, shell=True)
+BROKER = os.getenv("KAFKA_BROKER", "localhost:9094")
+TOPIC = os.getenv("KAFKA_INPUT_TOPIC", "input-events")
+
+producer = KafkaProducer(
+    bootstrap_servers=BROKER,
+    value_serializer=lambda value: json.dumps(value).encode("utf-8"),
+)
 
 keys = ["alpha", "beta", "gamma"]
 print("Sending 100 sample events to Kafka ...")
@@ -13,6 +20,8 @@ for i in range(100):
     o = {"key": random.choice(keys),
          "value": round(random.random()*100, 2),
          "ts": datetime.datetime.now(datetime.UTC).isoformat()}
-    send(json.dumps(o))
+    producer.send(TOPIC, o)
     time.sleep(0.1)
+producer.flush()
+producer.close()
 print("Done.")
